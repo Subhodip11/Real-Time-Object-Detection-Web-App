@@ -10,14 +10,11 @@ export function buildDetectedObjects(scores, threshold, boxes, classes, classesD
             const maxX = boxes[0][i][3] * video_frame.offsetWidth;
             // console.log('(', minX, ',', minY, ')\t(', maxX, ',', maxY, ')')
 
-
-            const bbox_plot = classes[i] === 2 ? ([minX + 50, minY - 30, maxX - minX, maxY - minY - 40]) : ([minX + 50, minY - 10, maxX - minX, maxY - minY - 10])
-
             detectionObjects.push({
                 class: classes[i],
                 label: classesDir[classes[i]].name,
                 score: score.toFixed(4),
-                bbox: bbox_plot,
+                bbox: [minX, minY, maxX - minX, maxY - minY],
             });
         }
     });
