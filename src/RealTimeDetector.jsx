@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { loadGraphModel } from "@tensorflow/tfjs-converter";
-import "./App.css";
+import "./RealTimeDetector.css";
 import { buildDetectedObjects } from "./utilities";
 import { labelMap } from "./label_map";
 import { Link } from "react-router-dom";
@@ -192,22 +192,8 @@ function RealTimeDetector() {
     <div className="parent-container">
       <header>
         <h1 className="heading">Real-Time Object Detection: Electronics</h1>
-        <div className="sub-heading">
-          Model Name :- SSD Mobilenet V2 320x320
-        </div>
-        <div className="sub-heading">
-          Dataset : Pre-trained model trained on COCO Dataset
-        </div>
-        {!isReadyState ? (
-          <div>Please wait, model getting ready to make predictions</div>
-        ) : (
-          <div>Model is Ready for predictions</div>
-        )}
-      </header>
-
-      <main>
-        <section>
-          <Link to="/ImageRecognition">
+        <section className="link-container">
+          <Link to="/ImageRecognition" className="link-design">
             <span
               onClick={() => {
                 delete window.tf;
@@ -224,7 +210,30 @@ function RealTimeDetector() {
               Switch to image recognition
             </span>
           </Link>
+          <button
+            className="controller-btn"
+            onClick={() => {
+              setDetecting(!detecting);
+            }}
+            disabled={!isReadyState && counter.current === 0}
+          >
+            {detecting ? "Stop Detection" : "Start Detection"}
+          </button>
         </section>
+        <div className="sub-heading">
+          Model Name :- SSD Mobilenet V2 320x320
+        </div>
+        <div className="sub-heading">
+          Dataset : Pre-trained model trained on COCO Dataset
+        </div>
+        {!isReadyState ? (
+          <div>Please wait, model getting ready to make predictions</div>
+        ) : (
+          <div>Model is Ready for predictions</div>
+        )}
+      </header>
+
+      <main>
         <div className="camera-container">
           <video
             style={{ height: "600px", width: "500px" }}
@@ -240,19 +249,6 @@ function RealTimeDetector() {
           <canvas className="size" ref={canvasRef} width="600" height="500" />
         </div>
       </main>
-      <section>
-        <div className="others-container">
-          <button
-            className="controller-btn"
-            onClick={() => {
-              setDetecting(!detecting);
-            }}
-            disabled={!isReadyState && counter.current === 0}
-          >
-            {detecting ? "Stop Detection" : "Start Detection"}
-          </button>
-        </div>
-      </section>
     </div>
   );
 }

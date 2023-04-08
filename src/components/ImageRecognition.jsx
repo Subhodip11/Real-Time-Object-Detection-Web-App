@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { loadGraphModel } from "@tensorflow/tfjs-converter";
-import "../App.css";
+import "./ImageRecognition.css";
 import { buildDetectedObjects } from "./ImageUtilities";
 import { labelMap } from "../label_map";
 import imageSrc from "../assets/images/img-w-1.jpg";
-import RealTimeDetector from "../RealTimeDetector";
 import { Link } from "react-router-dom";
 
 const threshold = 0.8;
@@ -170,8 +169,8 @@ function ImageRecognition() {
         )}
       </header>
       <main>
-        <section>
-          <Link to="/">
+        <section className="link-container">
+          <Link to="/" className="link-design">
             <span
               onClick={() => {
                 imageBackend.current = null;
@@ -185,24 +184,29 @@ function ImageRecognition() {
             </span>
           </Link>
         </section>
-        <div className="camera-container">
-          {isReadyState && (
-            <div className="upload-image">
-              <input type="file" onChange={handleImageUpload} />
-            </div>
-          )}
+        <div className="image-container">
           {image && (
             <img
               src={image}
               ref={imageRef}
               alt="image not found"
               style={{ height: "300px", width: "500px" }}
-              className="size"
+              className="image-canvas"
               id="image_frame"
             />
           )}
-          <canvas className="size" ref={canvasRef} width="500" height="300px" />
+          <canvas
+            className="image-canvas"
+            ref={canvasRef}
+            width="500"
+            height="300px"
+          />
         </div>
+        {isReadyState && (
+          <div className="upload-image">
+            <input type="file" onChange={handleImageUpload} />
+          </div>
+        )}
       </main>
     </div>
   );
