@@ -1,43 +1,42 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { loadGraphModel } from "@tensorflow/tfjs-converter";
-import "../App.css";
-import { buildDetectedObjects } from "./ImageUtilities";
-import { labelMap } from "../label_map";
-import imageSrc from "../assets/images/img-w-1.jpg";
-import RealTimeDetector from "../RealTimeDetector";
+import "./App.css";
+import { buildDetectedObjects } from "./utilities";
+import { labelMap } from "./label_map";
 import { Link } from "react-router-dom";
 
 const threshold = 0.8;
 
-function ImageRecognition() {
-  const imageRef = useRef();
+function RealTimeDetector() {
+  const videoRef = useRef();
   const canvasRef = useRef();
-  const [image, setImage] = useState(imageSrc);
+  const [camera, setCamera] = useState(null);
   const isReady = useRef(false);
   const [isReadyState, setIsReadyState] = useState(isReady.current);
-
-  const imageBackend = useRef(null);
+  const [detecting, setDetecting] = useState(true);
+  const backend = useRef(null);
+  const counter = useRef(0);
 
   async function load_model() {
     return tf
       .ready()
       .then(async () => {
-        // console.log("imageBackend is set");
+        // console.log("Backend is set");
         return [await loadGraphModel("http://127.0.0.1:8080/model.json"), true];
       })
       .catch((err) => console.log(err.message));
   }
 
-  const detectFrame = async (image, model) => {
+  const detectFrame = async (video, model) => {
     try {
       tf.engine().startScope();
-      if (model && image && imageBackend.current) {
-        // console.log("imageBackend value -> " + imageBackend.current);
-        model.executeAsync(process_input(await image)).then((predictions) => {
-          renderPredictions(predictions, image);
+      if (model && video && backend.current) {
+        // console.log("backend value -> " + backend.current);
+        model.executeAsync(process_input(await video)).then((predictions) => {
+          renderPredictions(predictions, video);
           requestAnimationFrame(() => {
-            detectFrame(image, model);
+            detectFrame(video, model);
           });
           tf.engine().endScope();
         });
@@ -47,8 +46,8 @@ function ImageRecognition() {
     }
   };
 
-  function process_input(image_frame) {
-    const tfimg = tf.browser.fromPixels(image_frame).toInt();
+  function process_input(video_frame) {
+    const tfimg = tf.browser.fromPixels(video_frame).toInt();
     const expandedimg = tfimg.transpose([0, 1, 2]).expandDims();
     return expandedimg;
   }
@@ -56,7 +55,7 @@ function ImageRecognition() {
   const renderPredictions = (predictions) => {
     try {
       const ctx = canvasRef.current.getContext("2d");
-      const video_frame = document.getElementById("image_frame");
+      const video_frame = document.getElementById("frame");
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
       // Font options.
@@ -80,10 +79,11 @@ function ImageRecognition() {
         video_frame
       );
 
-      //setting value of isReady to true for making users aware about state of imageBackend
+      //setting value of isReady to true for making users aware about state of backend
 
       isReady.current = true;
       setIsReadyState(isReady.current);
+      counter.current++;
       // console.log("reached in renderPredictions Function ->" + isReady.current);
 
       detections.forEach((item) => {
@@ -131,27 +131,62 @@ function ImageRecognition() {
     }
   };
 
-  const handleImageUpload = (e) => {
-    const imageFile = e.target.files[0];
-    const imageURL = URL.createObjectURL(imageFile);
-    setImage(imageURL);
-  };
-
   useEffect(() => {
-    // console.log("Entered here in detecting");
+    async function makeTFReady(model) {
+      if (
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia &&
+        detecting
+      ) {
+        navigator.mediaDevices
+          .getUserMedia({
+            audio: false,
+            video: {
+              facingMode: "user",
+            },
+          })
+          .then((stream) => {
+            setCamera(stream);
 
-    load_model()
-      .then((model) => {
-        if (model[1]) {
-          imageBackend.current = model[1];
-          // console.log(imageBackend.current);
-          detectFrame(imageRef.current, model[0]);
-        }
-      })
-      .catch((err) => {
-        console.log(err.message);
-      });
-  }, []);
+            window.stream = stream;
+            videoRef.current.srcObject = stream;
+            return new Promise((resolve, reject) => {
+              videoRef.current.onloadedmetadata = async () => {
+                // console.log("Entered in onloadedmetadata", backend);
+                detectFrame(videoRef.current, model);
+                resolve();
+              };
+            });
+          })
+          .catch((err) => console.log(err.message));
+
+        // console.log("In enable Camera to set backend");
+      }
+    }
+    if (detecting) {
+      // console.log("Entered here in detecting");
+      load_model()
+        .then((model) => {
+          if (model[1]) {
+            backend.current = model[1];
+            // console.log(backend.current);
+            makeTFReady(model[0]);
+          }
+        })
+        .catch((err) => {
+          console.log(err.message);
+        });
+    } else {
+      console.log("Entered in else part ");
+      backend.current = null;
+      isReady.current = false;
+      setIsReadyState(isReady.current);
+      if (camera) camera.getVideoTracks().forEach((track) => track.stop());
+
+      tf.disposeVariables();
+      tf.dispose();
+    }
+  }, [detecting]);
 
   return (
     <div className="parent-container">
@@ -169,42 +204,56 @@ function ImageRecognition() {
           <div>Model is Ready for predictions</div>
         )}
       </header>
+
       <main>
         <section>
-          <Link to="/">
+          <Link to="/ImageRecognition">
             <span
               onClick={() => {
-                imageBackend.current = null;
+                delete window.tf;
+                backend.current = null;
                 isReady.current = false;
                 setIsReadyState(isReady.current);
+                if (camera)
+                  camera.getVideoTracks().forEach((track) => track.stop());
+
                 tf.disposeVariables();
                 tf.dispose();
               }}
             >
-              Switch to Real Time Detector
+              Switch to image recognition
             </span>
           </Link>
         </section>
         <div className="camera-container">
-          {isReadyState && (
-            <div className="upload-image">
-              <input type="file" onChange={handleImageUpload} />
-            </div>
-          )}
-          {image && (
-            <img
-              src={image}
-              ref={imageRef}
-              alt="image not found"
-              style={{ height: "300px", width: "500px" }}
-              className="size"
-              id="image_frame"
-            />
-          )}
-          <canvas className="size" ref={canvasRef} width="500" height="300px" />
+          <video
+            style={{ height: "600px", width: "500px" }}
+            className="size"
+            autoPlay
+            playsInline
+            muted
+            ref={videoRef}
+            width="600"
+            height="500"
+            id="frame"
+          />
+          <canvas className="size" ref={canvasRef} width="600" height="500" />
         </div>
       </main>
+      <section>
+        <div className="others-container">
+          <button
+            className="controller-btn"
+            onClick={() => {
+              setDetecting(!detecting);
+            }}
+            disabled={!isReadyState && counter.current === 0}
+          >
+            {detecting ? "Stop Detection" : "Start Detection"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
-export default ImageRecognition;
+export default RealTimeDetector;

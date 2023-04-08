@@ -1,13 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
-// import App from "./App";
-import ImageRecognition from "./components/ImageRecognition";
+// import RealTimeDetector from "./RealTimeDetector";
+// import ImageRecognition from "./components/ImageRecognition";
+import App from "./App";
 
 ReactDOM.render(
   <React.StrictMode>
-    {/* <App /> */}
-    <ImageRecognition />
+    <App />
   </React.StrictMode>,
   document.getElementById("root")
 );
